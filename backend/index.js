@@ -2,34 +2,29 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./connectDB"); // Import connectDB
-
-
-
-// const shapeRoutes = require('./routes');
+const routes = require("./routes"); // Import routes
 
 const app = express();
 
-// // 
-// app.use(bodyParser.json());
-// app.use('/api', shapeRoutes);
-
-// app.listen(PORT, () => {
-//     console.log(`Server is running on http://localhost:${PORT}`);
-// });
-
-
-
-
+// Middleware
 app.use(express.json());
 app.use(cors());
 
-
 // Connect to MongoDB Atlas
-connectDB();
+connectDB()
+  .then(() => {
+    console.log("Connected to MongoDB");
+  })
+  .catch((error) => {
+    console.error("Failed to connect to MongoDB", error);
+  });
 
+// Use the routes
+app.use("/api", routes); // Prefix all routes with /api
+
+// Home route
 app.get("/", (req, res) => {
-  res.send("Welcome to the  MEMEOW MAKER");
+  res.send("Welcome to the MEMEOW MAKER");
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console. log(`Server is running on http://localhost:${process.env.PORT}`))
+const PORT = process.env.PORT || 400
