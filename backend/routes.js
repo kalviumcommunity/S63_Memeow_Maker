@@ -1,83 +1,90 @@
-// routes.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { MongoClient } = require("mongodb");
-const connectDB = require("./connectDB");
+const Entity = require('./models/Entity'); // Adjust the path as necessary
 
-let db;
+// Create a new entity (C)
+router.post('/entities', async (req, res) => {
+    try {
+    const { name, description } = req.body;
 
-// Connect to MongoDB and set the db variable
-connectDB()
-  .then((client) => {
-    db = client.db("your_database_name"); // Replace with your database name
-  })
-  .catch((error) => console.error("Failed to connect to MongoDB", error));
-
-// Create a new meme
-router.post("/memes", async (req, res) => {
-  try {
-    const meme = req.body;
-    const result = await db.collection("memes").insertOne(meme);
-    res.status(201).json(result.ops[0]);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to create meme" });
-  }
-});
-
-// Read all memes
-router.get("/memes", async (req, res) => {
-  try {
-    const memes = await db.collection("memes").find().toArray();
-    res.status(200).json(memes);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch memes" });
-  }
-});
-
-// Read a single meme by ID
-router.get("/memes/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const meme = await db.collection("memes").findOne({ _id: new MongoClient.ObjectId(id) });
-    if (!meme) {
-      return res.status(404).json({ error: "Meme not found" });
+    if (!name) {
+        return res.status(400).json({ message: 'Entity name is required' });
     }
-    res.status(200).json(meme);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch meme" });
-  }
+
+    const newEntity = new Entity({ name, description });
+
+    
+        await newEntity.save();
+        return res.status(201).json(newEntity);
+    } catch (error) {
+        console.error('Error adding entity:', error);
+        return res.status(500).json({ message: 'Error adding entity' });
+    }
 });
 
-// Update a meme by ID
-router.put("/memes/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updatedMeme = req.body;
-    const result = await db.collection("memes").updateOne(
-      { _id: new MongoClient.ObjectId(id) },
-      { $set: updatedMeme }
-    );
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: "Meme not found" });
+// Read all entities (R)
+router.get('/entities', async (req, res) => {
+    try {
+        const entities = await Entity.find();
+        return res.status(200).json(entities);
+    } catch (error) {
+        console.error('Error fetching entities:', error);
+        return res.status(500).json({ message: 'Error fetching entities' });
     }
-    res.status(200).json({ message: "Meme updated successfully" });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to update meme" });
-  }
 });
 
-// Delete a meme by ID
-router.delete("/memes/:id", async (req, res) => {
-  try {
+// Read a single entity by ID (R)
+router.get('/entities/:id', async (req, res) => {
     const { id } = req.params;
-    const result = await db.collection("memes").deleteOne({ _id: new MongoClient.ObjectId(id) });
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: "Meme not found" });
+
+    try {
+        const entity = await Entity.findById(id);
+        if (!entity) {
+            return res.status(404).json({ message: 'Entity not found' });
+        }
+        return res.status(200).json(entity);
+    } catch (error) {
+        console.error('Error fetching entity:', error);
+        return res.status(500).json({ message: 'Error fetching entity' });
     }
-    res.status(200).json({ message: "Meme deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to delete meme" });
-  }
+});
+
+// Update an entity by ID (U)
+router.put('/entities/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    try {
+       
+
+    if (!name) {
+        return res.status(400).json({ message: 'Entity name is required' });
+    }
+        const updatedEntity = await Entity.findByIdAndUpdate(id, { name }, { new: true });
+        if (!updatedEntity) {
+            return res.status(404).json({ message: 'Entity not found' });
+        }
+        return res.status(200).json(updatedEntity);
+    } catch (error) {
+        console.error('Error updating entity:', error);
+        return res.status(500).json({ message: 'Error updating entity' });
+    }
+});
+
+// Delete an entity by ID (D)
+router.delete('/entities/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const deletedEntity = await Entity.findByIdAndDelete(id);
+        if (!deletedEntity) {
+            return res.status(404).json({ message: 'Entity not found' });
+        }
+        return res.status(200).json({ message: 'Entity deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting entity:', error);
+        return res.status(500).json({ message: 'Error deleting entity' });
+    }
 });
 
 module.exports = router;
