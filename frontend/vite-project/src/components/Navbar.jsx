@@ -10,6 +10,7 @@ const Navbar = () => {
                 <h1>MEMEOW MAKER</h1>
                 <li><Link to="/">Add Entity</Link></li>
                 <li><Link to="/LandingPage">Landingpage</Link></li>
+                <li><Link to="/ManageEntity">ManageEntity</Link></li>
                 {/* <li><Link to="/UpdateEntities">UpdateEntities</Link></li> */}
             </ul>
         </nav>

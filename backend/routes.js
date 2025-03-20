@@ -1,9 +1,9 @@
 const express = require('express');
-const { body, param, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 const router = express.Router();
 const Entity = require('./models/Entity'); 
 
-// Middleware for validation
+// ✅ Validation Middleware
 const validateEntity = [
   body('name')
     .trim()
@@ -15,6 +15,10 @@ const validateEntity = [
     .notEmpty().withMessage('Description is required')
     .isLength({ min: 10, max: 200 }).withMessage('Description should be between 10 and 200 characters'),
 
+  body('created_by')
+    .trim()
+    .notEmpty().withMessage('Created by is required'),
+
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -24,12 +28,15 @@ const validateEntity = [
   }
 ];
 
-// ✅ Create Entity (C)
+// ✅ Create Entity (POST)
 router.post('/entities', validateEntity, async (req, res) => {
   try {
-    const { name, description } = req.body;
-    const newEntity = new Entity({ name, description });
+    const { name, description, created_by } = req.body;
+
+    // Create new entity
+    const newEntity = new Entity({ name, description, created_by });
     await newEntity.save();
+
     return res.status(201).json(newEntity);
   } catch (error) {
     console.error('Error adding entity:', error);
@@ -37,10 +44,19 @@ router.post('/entities', validateEntity, async (req, res) => {
   }
 });
 
-// ✅ Get All Entities (R)
+// ✅ Get All Entities (GET)
 router.get('/entities', async (req, res) => {
+  const { created_by } = req.query;
+
   try {
-    const entities = await Entity.find();
+    let query = {};
+
+    // Filter by created_by if provided
+    if (created_by) {
+      query.created_by = created_by;
+    }
+
+    const entities = await Entity.find(query);
     return res.status(200).json(entities);
   } catch (error) {
     console.error('Error fetching entities:', error);
@@ -48,7 +64,7 @@ router.get('/entities', async (req, res) => {
   }
 });
 
-// ✅ Get Single Entity by ID (R)
+// ✅ Get Single Entity by ID (GET)
 router.get('/entities/:id',
   param('id').isMongoId().withMessage('Invalid entity ID'),
   async (req, res) => {
@@ -71,7 +87,7 @@ router.get('/entities/:id',
   }
 );
 
-// ✅ Update Entity by ID (U)
+// ✅ Update Entity by ID (PUT)
 router.put('/entities/:id', [
   param('id').isMongoId().withMessage('Invalid entity ID'),
   ...validateEntity
@@ -82,17 +98,19 @@ router.put('/entities/:id', [
   }
 
   const { id } = req.params;
-  const { name, description } = req.body;
+  const { name, description, created_by } = req.body;
 
   try {
     const updatedEntity = await Entity.findByIdAndUpdate(
       id,
-      { name, description },
+      { name, description, created_by },
       { new: true }
     );
+
     if (!updatedEntity) {
       return res.status(404).json({ message: 'Entity not found' });
     }
+
     return res.status(200).json(updatedEntity);
   } catch (error) {
     console.error('Error updating entity:', error);
@@ -100,7 +118,7 @@ router.put('/entities/:id', [
   }
 });
 
-// ✅ Delete Entity by ID (D)
+// ✅ Delete Entity by ID (DELETE)
 router.delete('/entities/:id',
   param('id').isMongoId().withMessage('Invalid entity ID'),
   async (req, res) => {
