@@ -66,7 +66,7 @@ const styles = {
     margin: '16px',
     textAlign: 'center',
     backgroundColor: '#fff',
-    boxShadow: '0 2px 5px rgba(200, 104, 49, 0.1)',
+    boxShadow: '0 2px 5px rgba(240, 0, 0, 0.97)',
   },
   image: {
     width: '100%',
