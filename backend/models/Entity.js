@@ -1,24 +1,48 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../connectDB');
+const User = require('./User');
 
-const entitySchema = new mongoose.Schema({
+const Entity = sequelize.define('Entity', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
   name: {
-    type: String,
-    required: true,
-    minlength: 3,
-    maxlength: 50,
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    validate: {
+      len: [3, 50],
+      notEmpty: true,
+    },
   },
   description: {
-    type: String,
-    required: true,
-    minlength: 10,
-    maxlength: 200,
+    type: DataTypes.STRING(200),
+    allowNull: false,
+    validate: {
+      len: [10, 200],
+      notEmpty: true,
+    },
   },
-  created_by: {
-    type: String, // Storing the user as a string (can store user ID if needed)
-    required: true,
-  }
-}, { timestamps: true });
+  // The userId field will be automatically added by Sequelize
+}, {
+  timestamps: true,
+});
 
-const Entity = mongoose.model('Entity', entitySchema);
+// Define the relationship between Entity and User
+Entity.belongsTo(User, {
+  foreignKey: {
+    name: 'userId', // This will be the column name in the Entity table
+    allowNull: false,
+    field: 'created_by', // This is the actual column name in the database
+  },
+  as: 'creator', // This is the alias for the association
+});
+
+// Define the reverse relationship
+User.hasMany(Entity, {
+  foreignKey: 'userId',
+  as: 'entities',
+});
 
 module.exports = Entity;

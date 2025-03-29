@@ -4,7 +4,8 @@
   "description": "**Project Title:** *Memeow Maker*",
   "main": "index.js",
   "scripts": {
-    "dev": "node index.js"
+    "dev": "node index.js",
+    "seed": "node seedDB.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +14,9 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mongoose": "^8.10.0",
-    "nodemon": "^3.1.9"
+    "mysql2": "^3.14.0",
+    "nodemon": "^3.1.9",
+    "sequelize": "^6.37.6",
+    "sqlite3": "^5.1.7"
   }
 }
