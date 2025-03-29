@@ -15,16 +15,19 @@ const seedDatabase = async () => {
         username: 'catLover',
         email: 'cat.lover@example.com',
         name: 'Cat Lover',
+        password: 'password123', // Will be hashed by the beforeCreate hook
       },
       {
         username: 'memeCreator',
         email: 'meme.creator@example.com',
         name: 'Meme Creator',
+        password: 'password123', // Will be hashed by the beforeCreate hook
       },
       {
         username: 'funnyPerson',
         email: 'funny.person@example.com',
         name: 'Funny Person',
+        password: 'password123', // Will be hashed by the beforeCreate hook
       },
     ]);
 

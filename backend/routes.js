@@ -1,8 +1,186 @@
 const express = require('express');
 const { body, param, query, validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
 const Entity = require('./models/Entity');
 const User = require('./models/User');
+
+// ✅ Authentication Middleware
+const authenticateToken = async (req, res, next) => {
+  try {
+    const token = req.cookies.jwt;
+    
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+};
+
+// ✅ Authentication Routes
+// Register a new user
+router.post('/auth/register', [
+  body('username')
+    .trim()
+    .notEmpty().withMessage('Username is required')
+    .isLength({ min: 3, max: 50 }).withMessage('Username should be between 3 and 50 characters')
+    .custom(async (value) => {
+      const existingUser = await User.findOne({ where: { username: value } });
+      if (existingUser) {
+        throw new Error('Username already in use');
+      }
+      return true;
+    }),
+  
+  body('email')
+    .trim()
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Invalid email format')
+    .custom(async (value) => {
+      const existingUser = await User.findOne({ where: { email: value } });
+      if (existingUser) {
+        throw new Error('Email already in use');
+      }
+      return true;
+    }),
+  
+  body('name')
+    .trim()
+    .notEmpty().withMessage('Name is required')
+    .isLength({ min: 2, max: 100 }).withMessage('Name should be between 2 and 100 characters'),
+  
+  body('password')
+    .notEmpty().withMessage('Password is required')
+    .isLength({ min: 6 }).withMessage('Password should be at least 6 characters'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array().map(err => err.msg) });
+  }
+
+  try {
+    const { username, email, name, password } = req.body;
+    
+    // Create new user
+    const newUser = await User.create({
+      username,
+      email,
+      name,
+      password // Will be hashed by the beforeCreate hook
+    });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: newUser.id, username: newUser.username },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    // Set token in cookie
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    // Return user info (without password)
+    const userResponse = {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      name: newUser.name
+    };
+
+    return res.status(201).json({ user: userResponse });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    return res.status(500).json({ message: 'Error registering user' });
+  }
+});
+
+// Login user
+router.post('/auth/login', [
+  body('username').trim().notEmpty().withMessage('Username is required'),
+  body('password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array().map(err => err.msg) });
+  }
+
+  try {
+    const { username, password } = req.body;
+    
+    // Find user by username
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Check password
+    const isPasswordValid = await user.checkPassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, username: user.username },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+    
+    // Set token in cookie
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    
+    // Return user info (without password)
+    const userResponse = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name
+    };
+    
+    return res.status(200).json({ user: userResponse });
+  } catch (error) {
+    console.error('Error logging in:', error);
+    return res.status(500).json({ message: 'Error logging in' });
+  }
+});
+
+// Logout user
+router.post('/auth/logout', (req, res) => {
+  res.clearCookie('jwt');
+  return res.status(200).json({ message: 'Logged out successfully' });
+});
+
+// Get current user
+router.get('/auth/me', authenticateToken, (req, res) => {
+  const userResponse = {
+    id: req.user.id,
+    username: req.user.username,
+    email: req.user.email,
+    name: req.user.name
+  };
+  
+  return res.status(200).json({ user: userResponse });
+});
 
 // ✅ Validation Middleware
 const validateEntity = [
@@ -64,7 +242,7 @@ router.get('/users/:id',
 );
 
 // ✅ Create Entity (POST)
-router.post('/entities', validateEntity, async (req, res) => {
+router.post('/entities', authenticateToken, validateEntity, async (req, res) => {
   try {
     const { name, description, userId } = req.body;
 
@@ -146,7 +324,7 @@ router.get('/entities/:id',
 );
 
 // ✅ Update Entity by ID (PUT)
-router.put('/entities/:id', [
+router.put('/entities/:id', authenticateToken, [
   param('id').isInt().withMessage('Invalid entity ID'),
   ...validateEntity
 ], async (req, res) => {
@@ -182,7 +360,7 @@ router.put('/entities/:id', [
 });
 
 // ✅ Delete Entity by ID (DELETE)
-router.delete('/entities/:id',
+router.delete('/entities/:id', authenticateToken,
   param('id').isInt().withMessage('Invalid entity ID'),
   async (req, res) => {
     const errors = validationResult(req);
