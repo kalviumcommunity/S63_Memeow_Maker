@@ -3,15 +3,20 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const Navbar = () => {
-    
     return (
         <nav>
             <ul>
-                <h1>MEMEOW MAKER</h1>
-                <li><Link to="/">Add Entity</Link></li>
-                <li><Link to="/LandingPage">Landingpage</Link></li>
-                <li><Link to="/ManageEntity">ManageEntity</Link></li>
-                {/* <li><Link to="/UpdateEntities">UpdateEntities</Link></li> */}
+                <div className="logo-container">
+                    <h1>
+                        <span role="img" aria-label="cat emoji">😸</span> MEMEOW MAKER
+                    </h1>
+                </div>
+                <div className="nav-links">
+                    <li><Link to="/">Add Entity</Link></li>
+                    <li><Link to="/LandingPage">Landing Page</Link></li>
+                    <li><Link to="/ManageEntity">Manage Entities</Link></li>
+                    {/* <li><Link to="/UpdateEntities">UpdateEntities</Link></li> */}
+                </div>
             </ul>
         </nav>
     );

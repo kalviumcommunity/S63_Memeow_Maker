@@ -1,105 +1,94 @@
 // src/components/MemeCard.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 const MemeCard = ({ meme }) => {
   const [votes, setVotes] = useState(meme.votes);
+  const [isVoting, setIsVoting] = useState(false);
+  const [playSound, setPlaySound] = useState(false);
+  const [audio] = useState({
+    purr: new Audio('https://assets.mixkit.co/active_storage/sfx/2938/2938-preview.mp3'),
+    hiss: new Audio('https://assets.mixkit.co/active_storage/sfx/2121/2121-preview.mp3')
+  });
 
-  const handleUpvote = () => {
+  // Handle voting with sound effects
+  const handleVote = (type) => {
+    setIsVoting(true);
+    
+    // Play sound effect
+    setPlaySound(type);
+    
+    // Update votes
     setVotes((prevVotes) => ({
       ...prevVotes,
-      purrs: prevVotes.purrs + 1,
+      [type === 'purr' ? 'purrs' : 'hisses']: prevVotes[type === 'purr' ? 'purrs' : 'hisses'] + 1,
     }));
+    
+    // Reset voting state after animation
+    setTimeout(() => {
+      setIsVoting(false);
+      setPlaySound(false);
+    }, 1000);
   };
-
-  const handleDownvote = () => {
-    setVotes((prevVotes) => ({
-      ...prevVotes,
-      hisses: prevVotes.hisses + 1,
-    }));
-  };
+  
+  // Play sound effects
+  useEffect(() => {
+    if (playSound === 'purr') {
+      audio.purr.currentTime = 0;
+      audio.purr.play();
+    } else if (playSound === 'hiss') {
+      audio.hiss.currentTime = 0;
+      audio.hiss.play();
+    }
+    
+    // Cleanup function
+    return () => {
+      audio.purr.pause();
+      audio.hiss.pause();
+    };
+  }, [playSound, audio]);
 
   return (
-    <div className="meme-card" style={styles.card}>
-      <img src={meme.imageUrl} alt={meme.caption} style={styles.image} />
-      <h3 style={styles.caption}>{meme.caption}</h3>
-      <p style={styles.customText}>{meme.customText}</p>
-      <div style={styles.votes}>
-        <span>Purrs: {votes.purrs}</span>
-        <span> | Hisses: {votes.hisses}</span>
+    <div className={`meme-card ${isVoting ? 'shake' : ''}`}>
+      <div className="meme-image-container">
+        <img 
+          src={meme.imageUrl} 
+          alt={meme.caption} 
+          className="meme-image"
+        />
+        <div className="meme-caption-overlay">
+          <h3 className="meme-caption">{meme.caption}</h3>
+          <p className="meme-custom-text">{meme.customText}</p>
+        </div>
       </div>
-      <div style={styles.buttonContainer}>
-        <button onClick={handleUpvote} style={styles.button}>Purr</button>
-        <button onClick={handleDownvote} style={styles.button}>Hiss</button>
-      </div>
-    </div>
-  );
-};
-
-// Dummy data for the meme
-const dummyMeme = {
-    imageUrl: 'https://images.pexels.com/photos/57416/cat-sweet-kitty-animals-57416.jpeg?cs=srgb&dl=pexels-pixabay-57416.jpg&fm=jpg', // Replace with a valid image URL
-    caption: "Don't let your human tell you when to nap.",
-    customText: 'Just do it!',
-    votes: {
-      purrs: 10,
-      hisses: 2,
-    },
-  };
-
-// Render the MemeCard component with dummy data
-const App = () => {
-  return (
-    <div>
       
-      <MemeCard meme={dummyMeme} />
+      <div className="meme-votes">
+        <div className="vote-count">
+          <span role="img" aria-label="purr">😻</span> {votes.purrs}
+        </div>
+        <div className="vote-count">
+          <span role="img" aria-label="hiss">🙀</span> {votes.hisses}
+        </div>
+      </div>
+      
+      <div className="meme-buttons">
+        <button 
+          onClick={() => handleVote('purr')} 
+          className="purr-button"
+          disabled={isVoting}
+        >
+          Purr <span role="img" aria-label="purr">😻</span>
+        </button>
+        <button 
+          onClick={() => handleVote('hiss')} 
+          className="hiss-button"
+          disabled={isVoting}
+        >
+          Hiss <span role="img" aria-label="hiss">🙀</span>
+        </button>
+      </div>
     </div>
   );
-};
-
-// Styles for the MemeCard component
-const styles = {
-  card: {
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    padding: '16px',
-    margin: '16px',
-    textAlign: 'center',
-    backgroundColor: '#fff',
-    boxShadow: '0 2px 5px rgba(240, 0, 0, 0.97)',
-  },
-  image: {
-    width: '100%',
-    height: 'auto',
-    borderRadius: '8px',
-  },
-  caption: {
-    fontSize: '2rem', // Increased font size
-    margin: '8px 0',
-    color: '#333', // Darker color for better contrast
-    textShadow: '1px 1px 2px rgba(255, 255, 255, 0.7)', // Added text shadow
-  },
-  customText: {
-    fontSize: '1rem',
-    color: '#555',
-  },
-  votes: {
-    marginTop: '8px',
-    fontSize: '1rem',
-  },
-  buttonContainer: {
-    marginTop: '12px',
-  },
-  button: {
-    backgroundColor: '#4CAF50',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '10px 15px',
-    margin: '0 5px',
-    cursor: 'pointer',
-    fontSize: '1rem',
-  },
 };
 
 // PropTypes for type checking
@@ -115,4 +104,16 @@ MemeCard.propTypes = {
   }).isRequired,
 };
 
-export default App;
+// Dummy data for the meme (for demonstration purposes)
+export const dummyMeme = {
+  imageUrl: 'https://images.pexels.com/photos/57416/cat-sweet-kitty-animals-57416.jpeg',
+  caption: "Don't let your human tell you when to nap.",
+  customText: 'Just do it!',
+  votes: {
+    purrs: 10,
+    hisses: 2,
+  },
+};
+
+// Export the MemeCard component
+export default MemeCard;
